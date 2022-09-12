@@ -1,0 +1,1 @@
+Codes and notes on basic types of algorithms (python & java)
