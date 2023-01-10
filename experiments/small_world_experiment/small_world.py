@@ -1,11 +1,16 @@
 import networkx as nx
 import random
 import matplotlib.pyplot as plt
+import heapq
+import numpy as np
+import os
+import pandas as pd
+import itertools
 
 from timeit import default_timer as timer
 
 #https://www.algorithms-and-technologies.com/dijkstra/python
-https://bradfieldcs.com/algos/graphs/dijkstras-algorithm/
+#https://bradfieldcs.com/algos/graphs/dijkstras-algorithm/
 """
 #https://stackoverflow.com/questions/73682082/heap-dijkstra-implementation-is-slower-than-naive-dijsktra-implementation
 #https://gist.github.com/jasonhuh/957a75fc498a18a398069efb5a325db1
@@ -32,8 +37,8 @@ def FastDijkstra(vertices, start_point, lengths):
     return shortest_paths
 """
 
-"""
-def calculate_distances(graph, starting_vertex):
+
+def calculate_heap(graph, starting_vertex,end_vertex):
     distances = {vertex: float('infinity') for vertex in graph}
     distances[starting_vertex] = 0
 
@@ -47,7 +52,7 @@ def calculate_distances(graph, starting_vertex):
             continue
 
         for neighbor, weight in graph[current_vertex].items():
-            distance = current_distance + weight
+            distance = current_distance + weight["length"]
 
             # Only consider this new path if it's better than any path we've
             # already found.
@@ -55,61 +60,28 @@ def calculate_distances(graph, starting_vertex):
                 distances[neighbor] = distance
                 heapq.heappush(pq, (distance, neighbor))
 
-    return distances
-"""
-"""
-def dijkstra(graph, start):
-    """
-    #Implementation of dijkstra using adjacency matrix.
-    #This returns an array containing the length of the shortest path from the start node to each other node.
-    #It is only guaranteed to return correct results if there are no negative edges in the graph. Positive cycles are fine.
-    #This has a runtime of O(|V|^2) (|V| = number of Nodes), for a faster implementation see @see ../fast/Dijkstra.java (using adjacency lists)
+    return distances[end_vertex]
 
-    #:param graph: an adjacency-matrix-representation of the graph where (x,y) is the weight of the edge or 0 if there is no edge.
-    #:param start: the node to start from.
-    #:return: an array containing the shortest distances from the given start node to each other node
-    """
-    # This contains the distances from the start node to all other nodes
-    distances = [float("inf") for _ in range(len(graph))] #its an array! yay!
-
-    # This contains whether a node was already visited
+def calculate_array(graph, starting_vertex,end_vertex):
+    distances = {vertex: float('infinity') for vertex in graph}
+    distances[starting_vertex] = 0
+   
     visited = [False for _ in range(len(graph))]
 
-    # The distance from the start node to itself is of course 0
-    distances[start] = 0
-
-    # While there are nodes left to visit...
-    while True:
-
-        # ... find the node with the currently shortest distance from the start node...
+    while True: 
         shortest_distance = float("inf")
         shortest_index = -1
-        for i in range(len(graph)):
-            # ... by going through all nodes that haven't been visited yet
+        for i in range(len(graph)):  
             if distances[i] < shortest_distance and not visited[i]:
                 shortest_distance = distances[i]
                 shortest_index = i
-
-        # print("Visiting node " + str(shortest_index) + " with current distance " + str(shortest_distance))
-
         if shortest_index == -1:
-            # There was no node not yet visited --> We are done
-            return distances
-
-        # ...then, for all neighboring nodes that haven't been visited yet....
-        for i in range(len(graph[shortest_index])):
-            # ...if the path over this edge is shorter...
-            if graph[shortest_index][i] != 0 and distances[i] > distances[shortest_index] + graph[shortest_index][i]:
-                # ...Save this path as new shortest path.
-                distances[i] = distances[shortest_index] + graph[shortest_index][i]
-                # print("Updating distance of node " + str(i) + " to " + str(distances[i]))
-
-        # Lastly, note that we are finished with this node.
+            return distances[end_vertex]
+        for neighbor, weight in graph[shortest_index].items():
+            if distances[neighbor] > distances[shortest_index] + weight["length"]:
+                distances[neighbor] = distances[shortest_index] + weight["length"]
         visited[shortest_index] = True
-        # print("Visited nodes: " + str(visited))
-        # print("Currently lowest distances: " + str(distances))
 
-"""
 #generate a cycle
 class CycleGraph():
     def __init__(self):
@@ -118,39 +90,39 @@ class CycleGraph():
 
     #function to add random edges
     def add_edges(self, num_edges,edge_length):
-        for x in range(num_edges):
-            #randomly select 2 nodes
-            random_nodes = random.sample(list(self.graph.nodes()), 2)
-            #generate a new edge
-            self.graph.add_edge(random_nodes[0], random_nodes[1], length=edge_length)
+        possible_edges = [x for x in list(itertools.product(list(self.graph.nodes()), list(self.graph.nodes()))) if x[0]!=x[1]]
+        sampled_edges = random.sample(possible_edges,num_edges)
+        self.graph.add_edges_from(sampled_edges,length=edge_length)
         return
 
-    #calculate shortest distance for a random pair using two different data structures
-    def shortest_path(self):
-        sp_array = [] #returns value, time to run
-        sp_heap = [] #returns value, time to run
-        assert sp_array[0]==sp_heap[0] #make sure both versions calculated ok
-        return sp_array, sp_heap
-    
-    #calculate average shortest distance time 
-    def average_shortest_path(self,z):
-        for x in range(z):
-            dist = self.shortest_path()
+    def find_average_distances(self,graph_dict,z):
+        nodes_list = list(self.graph.nodes())
+        pairs = [random.sample(nodes_list, 2) for _ in range(z)]
+        arr_val,arr_time = self.dijkstra_array(graph_dict,pairs)
+        heap_val,heap_time = self.dijkstra_heap(graph_dict,pairs)
+        assert heap_val==arr_val
+        val = np.array(arr_val)
+        return np.mean(val),np.std(val),arr_time,heap_time
 
-    def dijkstra_array():
-        start = timer()
-        sp = []
-        end = timer()
-        total_time = end-start
+    def dijkstra_array(self,graph_dict,pairs):
+        distances = []
+        start_time = timer()
+        for start,end in pairs:
+            dist = calculate_array(graph_dict,start,end)
+            distances.append(dist)
+        end_time = timer()
+        total_time = end_time-start_time
+        return distances, total_time
 
-        return sp, total_time
-
-    def dijkstra_heap():
-        start = timer()
-        sp = []
-        end = timer()
-        total_time = end-start
-        return sp, total_time
+    def dijkstra_heap(self,graph_dict,pairs):
+        distances = []
+        start_time = timer()
+        for start,end in pairs:    
+            dist = calculate_heap(graph_dict,start,end)
+            distances.append(dist)
+        end_time = timer()
+        total_time = end_time-start_time
+        return distances, total_time
     
     def draw(self):
         plt.figure(1,figsize=(12,12))
@@ -161,14 +133,45 @@ class CycleGraph():
         plt.savefig("graph_100.png")
 
 class Experiment():
-    def __init__(self):
-        pass
+    def __init__(self,outfile):
+        self.outfile = outfile
 
 
-    def single_loop(self,num_edges,edge_length,z):
-        pass
+    def run(self,range_x,range_y,range_z):
+        for x in range_x:
+            for y in range_y:
+                new_graph = CycleGraph()
+                new_graph.add_edges(x,y)#add x edges of length 
+                graph_dict = nx.to_dict_of_dicts(new_graph.graph)
+                for z in range_z:
+                    self.run_single_scenario(new_graph,graph_dict,x,y,z)
+
+    def run_single_scenario(self,new_graph,graph_dict,x,y,z):
+        av_dist,std,arr_time,heap_time = new_graph.find_average_distances(graph_dict,z)
+        self.save(x,y,z,av_dist,std,arr_time,heap_time)
+        return
+
+    def save(self,x,y,z,d,std,arr_time,heap_time):
+        df_new = pd.DataFrame([[x,y,z,d,std,arr_time,heap_time]])
+        df_new.columns = ["x","y","z","d","std","arr_time","heap_time"]
+        df_new.to_csv(self.outfile, mode='a', header=not os.path.exists(self.outfile),index=None)
+
+
+class Statistics():
+    def __init__(self,results_csv):
+        self.results_csv = results_csv
+
 
 if __name__ == "__main__":
-    g = CycleGraph()
-    g.add_edges(100,3)
-    g.draw()
+    #draw a graph 
+    #g = CycleGraph()
+    #g.add_edges(100,3)
+    #g.draw()
+
+    #max x: 499500
+    e = Experiment("results.csv")
+    range_x = list(range(1,499500,500))#max num edges to add: 499 500
+    range_y = list(range(1,1000))#there will be always a shortest minimal path d=500
+    range_z = [10**x for x in range(6)]
+    e.run(range_x,range_y,range_z)
+    #e.run([1,10,1000],[1,2,3],[1,1000,10000])
