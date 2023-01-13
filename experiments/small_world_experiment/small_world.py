@@ -87,10 +87,16 @@ class CycleGraph():
     def __init__(self):
         self.graph = nx.cycle_graph(1000) #create a cycle with 1000 nodes
         nx.set_edge_attributes(self.graph, values = 1, name = 'length') #set weights to 1
+        print(self.graph.edges(data=True))
+
 
     #function to add random edges
     def add_edges(self, num_edges,edge_length):
-        possible_edges = [x for x in list(itertools.product(list(self.graph.nodes()), list(self.graph.nodes()))) if x[0]!=x[1]]
+        nodes = range(1000)
+        edges = list(self.graph.edges())
+        edges += [(x[1],x[0]) for x in edges]
+        
+        possible_edges = [x for x in list(itertools.product(nodes,nodes)) if x[0]!=x[1] and x not in edges]
         sampled_edges = random.sample(possible_edges,num_edges)
         self.graph.add_edges_from(sampled_edges,length=edge_length)
         return
@@ -128,8 +134,8 @@ class CycleGraph():
         plt.figure(1,figsize=(12,12))
         #pos=nx.drawing.nx_agraph.graphviz_layout(self.graph)
         #nx.draw_networkx(self.graph,pos)
-        #nx.draw_circular(self.graph, node_size=0.1)
-        nx.draw(self.graph, node_size=10)
+        nx.draw_circular(self.graph, node_size=0.1)
+        #nx.draw(self.graph, node_size=10)
         plt.savefig("graph_100.png")
 
 class Experiment():
@@ -159,19 +165,60 @@ class Experiment():
 
 class Statistics():
     def __init__(self,results_csv):
-        self.results_csv = results_csv
+        with open(results_csv) as f:
+            self.df = pd.read_csv(f)
+        
+    def generate_dataframes(self):
+        return self.df.iloc[800:]
+        #df_comparison = 
+
+    def finding_z(self):
+        df = self.df.iloc[800:]
+        df1 = df[df["z"]==1]
+        df10 = df[df["z"]==10]
+        df100 = df[df["z"]==100]
+        df1000 = df[df["z"]==1000]
+        list1 = df1["z"].to_list()
+        list10 = df10["z"].to_list()
+        list100 = df100["z"].to_list()
+        list1000 = df1000["z"].to_list()
+        diff_1 = []
+        diff_10 = []
+        diff_100 = []
+        for i in range(len(list1)):
+            d1 = np.abs((list10[i]-list1[i]))
+            d10 = np.abs((list100[i]-list10[i]))
+            d100 = np.abs((list1000[i]-list100[i]))
+            diff_1.append(d1)
+            diff_10.append(d10)
+            diff_100.append(d100)
+        print(np.mean(diff_1),np.mean(diff_10),np.mean(diff_100))
+        
+
+
+    def compare_xy(self):
+        pass
+    def compare_time(self):
+        pass
 
 
 if __name__ == "__main__":
+    #s = Statistics("results.csv")
+    #a = s.generate_dataframes()
     #draw a graph 
     #g = CycleGraph()
-    #g.add_edges(100,3)
-    #g.draw()
+    #g.add_edges(5,3)
+    #print("after")
+    #for e in g.graph.edges(data=True):
+    #    print(e)
+    g = CycleGraph()
+    g.add_edges(100,3)
+    g.draw()
 
     #max x: 499500
-    e = Experiment("results.csv")
-    range_x = list(range(1,499500,500))#max num edges to add: 499 500
-    range_y = list(range(1,1000))#there will be always a shortest minimal path d=500
-    range_z = [10**x for x in range(6)]
-    e.run(range_x,range_y,range_z)
+    #e = Experiment("results.csv")
+    #range_x = list(range(1,499500,500))#max num edges to add: 499 500
+    #range_y = list(range(1,1000))#there will be always a shortest minimal path d=500
+    #range_z = [10**x for x in range(6)]
+    #e.run(range_x,range_y,range_z)
     #e.run([1,10,1000],[1,2,3],[1,1000,10000])
